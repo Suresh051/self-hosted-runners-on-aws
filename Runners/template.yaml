@@ -236,8 +236,11 @@ Resources:
                 - !Sub "HOOKNAME='${TerminateLifecycleHook}'"
                 - !Sub "ASG='${AutoScalingGroup}'"
                 - !Sub "PAT=${PAT}"
-                - 'token=$(curl -s -XPOST -H "authorization: token $PAT" https://api.github.com/repos/JimmyDqv/runners-test/actions/runners/remove-token | jq -r .token)'
-                - 'su ec2-user -c "./config.sh remove --token $token"'
+                - 'registration_url="https://github.com/api/v3/orgs/Suresh051/actions/runners/registration-token'
+                - 'echo "Requesting registration URL at ${registration_url}'
+                - 'payload=$(curl -sX POST -H "Authorization: token ${GITHUB_PAT}" ${registration_url})'
+                - 'export RUNNER_TOKEN=$(echo $payload | jq .token --raw-output)'
+                - 'su ec2-user -c "./config.sh remove --token RUNNER_TOKEN"'
                 - "REGION=$(curl http://169.254.169.254/latest/meta-data/placement/availability-zone)"
                 - "REGION=${REGION::-1}"
                 - "INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)"
@@ -263,8 +266,11 @@ Resources:
                 - "sudo ./svc.sh stop"
                 - "sudo ./svc.sh uninstall"
                 - !Sub "PAT=${PAT}"
-                - 'token=$(curl -s -XPOST -H "authorization: token $PAT" https://api.github.com/repos/JimmyDqv/runners-test/actions/runners/remove-token | jq -r .token)'
-                - 'su ec2-user -c "./config.sh remove --token $token"'
+                - 'registration_url="https://github.com/api/v3/orgs/Suresh051/actions/runners/registration-token'
+                - 'echo "Requesting registration URL at ${registration_url}'
+                - 'payload=$(curl -sX POST -H "Authorization: token ${GITHUB_PAT}" ${registration_url})'
+                - 'export RUNNER_TOKEN=$(echo $payload | jq .token --raw-output)'
+                - 'su ec2-user -c "./config.sh remove --token RUNNER_TOKEN"'
 
   Permission:
     Type: AWS::Lambda::Permission
