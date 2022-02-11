@@ -115,6 +115,10 @@ Resources:
           Fn::Base64:
             Fn::Sub: |
               #!/bin/bash -xe
+              export RUNNER_ALLOW_RUNASROOT="1"
+              HOST=github.deere.com
+              ORG=EDL
+              RUNNER_WORKDIR=_work
               yum update -y
               yum install docker -y
               yum install git -y
@@ -125,17 +129,25 @@ Resources:
               export RUNNER_ALLOW_RUNASROOT=true
               mkdir actions-runner
               cd actions-runner
-              curl -O -L https://github.com/actions/runner/releases/download/v2.279.0/actions-runner-linux-x64-2.279.0.tar.gz
-              tar xzf ./actions-runner-linux-x64-2.279.0.tar.gz
+              RUNNER_VERSION=$(curl -s https://api.github.com/repos/actions/runner/releases/latest | jq '.tag_name' --raw-output | cut -c2-)
+              curl -Ls https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz | tar xz
               PAT=${PAT}
               INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
               echo my-runners-$INSTANCEID
-              token=$(curl -s -XPOST \
-                  -H "authorization: token $PAT" \
-                  https://api.github.com/repos/JimmyDqv/runners-test/actions/runners/registration-token | \
-                  jq -r .token)
+              registration_url="https://$HOST/api/v3/orgs/$ORG/actions/runners/registration-token"
+              echo "Requesting registration URL at '${registration_url}'"
+              payload=$(curl -sX POST -H "Authorization: token ${GITHUB_PAT}" ${registration_url})
+              export RUNNER_TOKEN=$(echo $payload | jq .token --raw-output)
               sudo chown ec2-user -R /actions-runner
-              ./config.sh --url https://github.com/JimmyDqv/runners-test --token $token --name "my-runners-$INSTANCEID" --work _work
+              ./config.sh \
+                --name $(hostname) \
+                --labels devl-linux-edl \
+                --token ${RUNNER_TOKEN} \
+                --runnergroup edl-devl \
+                --url https://${HOST}/${ORG} \
+                --work ${RUNNER_WORKDIR} \
+                --unattended \
+                --replace \
               sudo ./svc.sh install
               sudo ./svc.sh start
               sudo chown ec2-user -R /actions-runner
